@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect x="16" y="16" width="480" height="480" rx="96" fill="#1f4e8c"/>
+  <rect x="72" y="64" width="300" height="300" rx="20" fill="#ffffff"/>
+  <rect x="72" y="64" width="300" height="64" rx="20" fill="#d7e3f4"/>
+  <rect x="72" y="108" width="300" height="20" fill="#d7e3f4"/>
+  <g stroke="#9aa9bf" stroke-width="8">
+    <line x1="72" y1="128" x2="372" y2="128"/>
+    <line x1="72" y1="206" x2="372" y2="206"/>
+    <line x1="72" y1="284" x2="372" y2="284"/>
+    <line x1="172" y1="64" x2="172" y2="364"/>
+    <line x1="272" y1="64" x2="272" y2="364"/>
+  </g>
+  <g transform="rotate(30 380 280)">
+    <rect x="362" y="130" width="36" height="300" rx="18" fill="#f2a33a" stroke="#7a4a0e" stroke-width="8"/>
+    <rect x="332" y="120" width="96" height="34" rx="17" fill="#f2a33a" stroke="#7a4a0e" stroke-width="8"/>
+    <rect x="340" y="230" width="80" height="28" rx="14" fill="#f2a33a" stroke="#7a4a0e" stroke-width="8"/>
+    <rect x="366" y="420" width="28" height="30" rx="8" fill="#3a3a3a"/>
+  </g>
+  <text x="72" y="460" font-family="DejaVu Sans" font-weight="bold" font-size="92" fill="#ffffff">1С</text>
+</svg>

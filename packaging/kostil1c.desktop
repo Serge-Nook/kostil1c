@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=Костыль 1С
+Name[ru]=Костыль 1С
+GenericName=CSV splitter
+GenericName[ru]=Разделение CSV из 1С по подразделениям
+Comment=Split a 1C CSV export into per-department tables (CSV, XLSX, PDF, HTML)
+Comment[ru]=Делит CSV-выгрузку из 1С по подразделениям и экспортирует в CSV, XLS, PDF, HTML
+Exec=kostil1c %f
+Icon=kostil1c
+Terminal=false
+Categories=Office;Spreadsheet;
+MimeType=text/csv;
+Keywords=1C;CSV;1С;
