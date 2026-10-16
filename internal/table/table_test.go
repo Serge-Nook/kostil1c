@@ -14,7 +14,7 @@ func TestParseSample(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !doc.BOM || len(doc.Info) != 3 || doc.Header[2] != "Подразделение" || len(doc.Rows) != 60 {
+	if !doc.BOM || len(doc.Info) != InfoLines || doc.Header[2] != "Подразделение" || len(doc.Rows) != 60 {
 		t.Fatalf("unexpected doc: bom=%v info=%d header=%v rows=%d", doc.BOM, len(doc.Info), doc.Header, len(doc.Rows))
 	}
 	total := 0
@@ -27,7 +27,7 @@ func TestParseSample(t *testing.T) {
 }
 
 func TestDepartmentsOrderAndEmpty(t *testing.T) {
-	doc, err := Parse([]byte("a\nb\nc\nN;F;Dept\n1;x;10 B\n2;y;2 A\n3;z;\n4;w;10 B\n"))
+	doc, err := Parse([]byte("a\nb\nN;F;Dept\n1;x;10 B\n2;y;2 A\n3;z;\n4;w;10 B\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,7 +39,7 @@ func TestDepartmentsOrderAndEmpty(t *testing.T) {
 
 func TestWindows1251Fallback(t *testing.T) {
 	// "Отдел" in Windows-1251
-	doc, err := Parse([]byte("1\n2\n3\nA;B;C\n1;2;\xce\xf2\xe4\xe5\xeb\n"))
+	doc, err := Parse([]byte("1\n2\nA;B;C\n1;2;\xce\xf2\xe4\xe5\xeb\n"))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -110,8 +110,8 @@ func (u *ui) openFile() {
 			d.SetLocation(l)
 		}
 	}
-	d.Resize(fyne.NewSize(800, 560))
 	d.Show()
+	d.Resize(fyne.NewSize(800, 560))
 }
 
 func (u *ui) load(path string) {
@@ -221,7 +221,7 @@ func (u *ui) showExport() {
 		checks[f] = c
 		formatBox.Add(c)
 	}
-	withInfo := widget.NewCheck("Добавлять информационные строки (1–3) из исходного файла", nil)
+	withInfo := widget.NewCheck("Добавлять информационные строки (1–2) из исходного файла", nil)
 	withInfo.SetChecked(prefs.BoolWithFallback(prefWithInfo, true))
 
 	dirEntry := widget.NewEntry()
@@ -236,8 +236,8 @@ func (u *ui) showExport() {
 		if l, err := storage.ListerForURI(storage.NewFileURI(dirEntry.Text)); err == nil {
 			fd.SetLocation(l)
 		}
-		fd.Resize(fyne.NewSize(800, 560))
 		fd.Show()
+		fd.Resize(fyne.NewSize(800, 560))
 	})
 
 	progress := widget.NewProgressBar()

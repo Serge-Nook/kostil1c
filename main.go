@@ -11,7 +11,7 @@ import (
 
 const (
 	appName    = "Костыль 1С"
-	appVersion = "1.0.0"
+	appVersion = "1.0.1"
 	appAuthor  = "Горшков Сергей Владимирович"
 	appSite    = "https://nookbat.ru/"
 )

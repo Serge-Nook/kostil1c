@@ -52,3 +52,20 @@ func TestRunAllFormats(t *testing.T) {
 		t.Fatalf("csv round trip mismatch")
 	}
 }
+
+func TestPDFWideTable(t *testing.T) {
+	header := make([]string, 18)
+	row := make([]string, 18)
+	for i := range header {
+		header[i] = "Столбец номер " + strings.Repeat("x", i)
+		row[i] = strings.Repeat("Длинное значение ", 1+i%3)
+	}
+	dir := t.TempDir()
+	if out := os.Getenv("KOSTIL_TEST_OUT"); out != "" {
+		dir = out
+	}
+	s := &Sheet{Title: "Широкая таблица", Header: header, Rows: [][]string{row, row}}
+	if err := Write(PDF, filepath.Join(dir, "wide.pdf"), s); err != nil {
+		t.Fatal(err)
+	}
+}

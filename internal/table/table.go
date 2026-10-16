@@ -17,7 +17,7 @@ import (
 
 const (
 	// InfoLines is the number of informational lines before the header.
-	InfoLines = 3
+	InfoLines = 2
 	// DeptColumn is the zero-based index of the department column.
 	DeptColumn = 2
 	// NoDept is the display name for rows with an empty department cell.
@@ -97,7 +97,7 @@ func Parse(data []byte) (*Doc, error) {
 		}
 	}
 	if doc.Header == nil {
-		return nil, errors.New("в файле нет строки шапки (4-я строка)")
+		return nil, errors.New("в файле нет строки шапки (3-я строка)")
 	}
 	if len(doc.Header) <= DeptColumn {
 		return nil, fmt.Errorf("в шапке меньше %d столбцов — нет столбца подразделения", DeptColumn+1)

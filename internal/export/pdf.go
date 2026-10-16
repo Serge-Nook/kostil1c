@@ -3,6 +3,7 @@ package export
 import (
 	_ "embed"
 	"math"
+	"strings"
 
 	"github.com/go-pdf/fpdf"
 )
@@ -18,8 +19,7 @@ const (
 	pdfMargin  = 10.0
 	pdfFooter  = 7.0
 	pdfPad     = 1.0
-	pdfMinCol  = 10.0
-	pdfMaxCol  = 80.0
+	pdfMinCol  = 6.0
 	ptToMM     = 25.4 / 72
 	lineFactor = 1.25
 )
@@ -33,15 +33,52 @@ type pdfTable struct {
 	header   []string
 }
 
-func writePDF(path string, s *Sheet) error {
-	cols := s.Columns()
-	page := "A4"
-	if cols > 14 {
-		page = "A3"
-	}
-	pdf := fpdf.New("L", "mm", page, "")
+type pdfPage struct {
+	w, h float64
+	font float64
+}
+
+// Landscape sheets tried in order until the table fits at its natural width.
+var pdfPages = []pdfPage{
+	{297, 210, 8}, // A4
+	{420, 297, 8}, // A3
+	{420, 297, 7},
+	{594, 420, 7}, // A2
+	{594, 420, 6},
+}
+
+func newPDF(w, h float64) *fpdf.Fpdf {
+	pdf := fpdf.NewCustom(&fpdf.InitType{UnitStr: "mm", Size: fpdf.SizeType{Wd: w, Ht: h}})
 	pdf.AddUTF8FontFromBytes("DejaVu", "", fontRegular)
 	pdf.AddUTF8FontFromBytes("DejaVu", "B", fontBold)
+	// Padding is applied explicitly; the default cell margin would also shrink SplitText widths.
+	pdf.SetCellMargin(0)
+	return pdf
+}
+
+func writePDF(path string, s *Sheet) error {
+	cols := s.Columns()
+	header := make([]string, cols)
+	copy(header, s.Header)
+
+	// Columns are as wide as their longest value so every cell stays on one line;
+	// the sheet grows (and the font shrinks slightly) when the table is too wide.
+	measure := newPDF(297, 210)
+	var page pdfPage
+	var widths []float64
+	sum := 0.0
+	for _, p := range pdfPages {
+		widths, sum = naturalWidths(measure, header, s.Rows, p.font)
+		page = p
+		if sum <= p.w-2*pdfMargin {
+			break
+		}
+	}
+	if sum > page.w-2*pdfMargin {
+		page.w = sum + 2*pdfMargin
+	}
+
+	pdf := newPDF(page.w, page.h)
 	pdf.SetMargins(pdfMargin, pdfMargin, pdfMargin)
 	pdf.SetAutoPageBreak(false, pdfMargin)
 	pdf.SetTitle(s.Title, true)
@@ -51,21 +88,18 @@ func writePDF(path string, s *Sheet) error {
 		pdf.SetY(-pdfMargin - 3)
 		pdf.SetFont("DejaVu", "", 7)
 		pdf.SetTextColor(110, 110, 110)
-		pageW, _ := pdf.GetPageSize()
 		pageNo := "Стр. " + itoa(pdf.PageNo()) + " из {nb}"
-		pdf.CellFormat(0, 4, fitText(pdf, s.Title, pageW-2*pdfMargin-pdf.GetStringWidth(pageNo)-10), "", 0, "L", false, 0, "")
+		pdf.CellFormat(0, 4, fitText(pdf, s.Title, page.w-2*pdfMargin-pdf.GetStringWidth(pageNo)-10), "", 0, "L", false, 0, "")
 		pdf.SetX(pdfMargin)
 		pdf.CellFormat(0, 4, pageNo, "", 0, "R", false, 0, "")
 		pdf.SetTextColor(0, 0, 0)
 	})
 
-	pageW, pageH := pdf.GetPageSize()
-	avail := pageW - 2*pdfMargin
-
-	header := make([]string, cols)
-	copy(header, s.Header)
-	t := &pdfTable{pdf: pdf, header: header, bottom: pageH - pdfMargin - pdfFooter}
-	t.layout(s.Rows, avail)
+	avail := page.w - 2*pdfMargin
+	t := &pdfTable{
+		pdf: pdf, header: header, widths: widths, fontSize: page.font,
+		lineH: page.font * ptToMM * lineFactor, bottom: page.h - pdfMargin - pdfFooter,
+	}
 
 	pdf.AddPage()
 	pdf.SetFont("DejaVu", "B", 13)
@@ -74,7 +108,6 @@ func writePDF(path string, s *Sheet) error {
 	for _, line := range s.InfoText() {
 		pdf.MultiCell(avail, 4, line, "", "L", false)
 	}
-	pdf.SetFont("DejaVu", "", 8)
 	pdf.MultiCell(avail, 4, "Всего сотрудников: "+itoa(len(s.Rows)), "", "L", false)
 	pdf.Ln(2)
 
@@ -86,40 +119,26 @@ func writePDF(path string, s *Sheet) error {
 	return pdf.OutputFileAndClose(path)
 }
 
-// layout picks the font size and column widths so the table spans the page width.
-func (t *pdfTable) layout(rows [][]string, avail float64) {
-	cols := len(t.header)
-	natural := func(size float64) ([]float64, float64) {
-		w := make([]float64, cols)
-		sum := 0.0
-		for c := 0; c < cols; c++ {
-			t.pdf.SetFont("DejaVu", "B", size)
-			m := longestWord(t.pdf, t.header[c])
-			t.pdf.SetFont("DejaVu", "", size)
-			for _, r := range rows {
-				if v := t.pdf.GetStringWidth(cell(r, c)); v > m {
+// naturalWidths returns per-column widths that fit the longest cell line
+// (header cells may wrap between words) and their sum.
+func naturalWidths(pdf *fpdf.Fpdf, header []string, rows [][]string, size float64) ([]float64, float64) {
+	w := make([]float64, len(header))
+	sum := 0.0
+	for c := range header {
+		pdf.SetFont("DejaVu", "B", size)
+		m := longestWord(pdf, header[c])
+		pdf.SetFont("DejaVu", "", size)
+		for _, r := range rows {
+			for _, line := range strings.Split(cell(r, c), "\n") {
+				if v := pdf.GetStringWidth(line); v > m {
 					m = v
 				}
 			}
-			m = math.Min(math.Max(m+2*pdfPad+0.5, pdfMinCol), pdfMaxCol)
-			w[c] = m
-			sum += m
 		}
-		return w, sum
+		w[c] = math.Max(m+2*pdfPad+0.8, pdfMinCol)
+		sum += w[c]
 	}
-	size := 8.0
-	w, sum := natural(size)
-	for size > 5.5 && sum > avail*1.8 {
-		size -= 0.5
-		w, sum = natural(size)
-	}
-	k := avail / sum
-	for i := range w {
-		w[i] *= k
-	}
-	t.widths = w
-	t.fontSize = size
-	t.lineH = size * ptToMM * lineFactor
+	return w, sum
 }
 
 func longestWord(pdf *fpdf.Fpdf, s string) float64 {
