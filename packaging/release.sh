@@ -29,5 +29,5 @@ docker run --rm \
 ./packaging/build-windows.sh
 
 cd dist
-sha256sum Kostil1C-*.AppImage kostil1c_*.deb Kostil1C-*.exe > SHA256SUMS
+sha256sum Kostil1C-*.AppImage kostil1c_*.deb Kostil1C-*.exe Kostil1C-*.zip > SHA256SUMS
 cat SHA256SUMS

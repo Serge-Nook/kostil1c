@@ -15,6 +15,7 @@ th,td{border:1px solid #9aa4b1;padding:4px 6px;vertical-align:top;text-align:lef
 th{background:#dde5f0;position:sticky;top:0}
 tr:nth-child(even) td{background:#f5f7fa}
 p.total{margin-top:8px;color:#555}
+p.blank{margin:0;line-height:1.4em}
 @media print{th{position:static}body{margin:0}}`
 
 func writeHTML(path string, s *Sheet) error {
@@ -28,7 +29,11 @@ func writeHTML(path string, s *Sheet) error {
 
 	w.WriteString("<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<meta charset=\"utf-8\">\n<title>")
 	w.WriteString(esc(s.Title))
-	w.WriteString("</title>\n<style>\n" + htmlStyle + "\n</style>\n</head>\n<body>\n<h1>")
+	w.WriteString("</title>\n<style>\n" + htmlStyle + "\n</style>\n</head>\n<body>\n")
+	for i := 0; i < s.Blank; i++ {
+		w.WriteString("<p class=\"blank\">&nbsp;</p>\n")
+	}
+	w.WriteString("<h1>")
 	w.WriteString(esc(s.Title))
 	w.WriteString("</h1>\n")
 	for _, line := range s.InfoText() {

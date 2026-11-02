@@ -102,6 +102,9 @@ func writePDF(path string, s *Sheet) error {
 	}
 
 	pdf.AddPage()
+	if s.Blank > 0 {
+		pdf.Ln(float64(s.Blank) * 13 * ptToMM * lineFactor)
+	}
 	pdf.SetFont("DejaVu", "B", 13)
 	pdf.MultiCell(avail, 6, s.Title, "", "L", false)
 	pdf.SetFont("DejaVu", "", 8)

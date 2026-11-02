@@ -49,7 +49,7 @@ func writeXLSX(path string, s *Sheet) error {
 		return err
 	}
 
-	rowNum := 1
+	rowNum := 1 + s.Blank
 	for _, rec := range s.Info {
 		if err := setRow(x, name, rowNum, rec); err != nil {
 			return err
