@@ -13,7 +13,7 @@ import (
 
 const (
 	appName    = "Костыль 1С"
-	appVersion = "1.0.2"
+	appVersion = "1.0.3"
 	appAuthor  = "Горшков Сергей Владимирович"
 	appSite    = "https://nookbat.ru/"
 	appEmail   = "i@nookbat.ru"
