@@ -37,7 +37,7 @@ func TestRunAllFormats(t *testing.T) {
 		dir = out
 	}
 	depts := doc.Departments()
-	res := Run(doc, depts, Formats, dir, true, nil)
+	res := Run(doc, depts, Formats, dir, Options{WithInfo: true, BlankRows: 2}, nil)
 	if len(res.Errors) > 0 {
 		t.Fatal(res.Errors)
 	}
@@ -67,5 +67,34 @@ func TestPDFWideTable(t *testing.T) {
 	s := &Sheet{Title: "Широкая таблица", Header: header, Rows: [][]string{row, row}}
 	if err := Write(PDF, filepath.Join(dir, "wide.pdf"), s); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestXLSLarge(t *testing.T) {
+	header := []string{"Номер", "ФИО", "Подразделение", "Комментарий"}
+	var rows [][]string
+	for i := 0; i < 20000; i++ {
+		rows = append(rows, []string{itoa(i), "Сотрудник " + itoa(i), "037 Отдел", strings.Repeat("длинный текст ", 1+i%40)})
+	}
+	dir := t.TempDir()
+	if out := os.Getenv("KOSTIL_TEST_OUT"); out != "" {
+		dir = out
+	}
+	s := &Sheet{Title: "Большая таблица", Blank: 2, Header: header, Rows: rows}
+	if err := Write(XLS, filepath.Join(dir, "large.xls"), s); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestDeptCode(t *testing.T) {
+	for in, want := range map[string]string{
+		"037 отдел главного энергетика": "037",
+		"009-567 Бухгалтерия, финансы":  "009-567",
+		"Администрация":                 "Администрация",
+		"12.3. Склад":                   "12.3",
+	} {
+		if got := DeptCode(in); got != want {
+			t.Errorf("DeptCode(%q) = %q, want %q", in, got, want)
+		}
 	}
 }

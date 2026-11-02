@@ -15,6 +15,9 @@ func writeCSV(path string, s *Sheet) error {
 	if s.BOM {
 		bw.Write([]byte{0xEF, 0xBB, 0xBF})
 	}
+	for i := 0; i < s.Blank; i++ {
+		bw.WriteString("\r\n")
+	}
 	w := csv.NewWriter(bw)
 	w.Comma = ';'
 	w.UseCRLF = true

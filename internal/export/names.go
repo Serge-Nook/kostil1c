@@ -2,6 +2,7 @@ package export
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"unicode"
 )
@@ -67,4 +68,16 @@ func (n *Namer) Name(dept string) string {
 	}
 	n.used[strings.ToLower(name)] = true
 	return name
+}
+
+var deptCodeRe = regexp.MustCompile(`[0-9][0-9.\-/]*`)
+
+// DeptCode returns the department number from its name: "037 Отдел…" → "037",
+// "009-567 Бухгалтерия, финансы" → "009-567". Names without digits are returned unchanged.
+func DeptCode(name string) string {
+	code := strings.TrimRight(deptCodeRe.FindString(name), ".-/")
+	if code == "" {
+		return name
+	}
+	return code
 }

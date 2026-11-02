@@ -15,21 +15,24 @@ type Format string
 
 const (
 	CSV  Format = "csv"
+	XLS  Format = "xls"
 	XLSX Format = "xlsx"
 	PDF  Format = "pdf"
 	HTML Format = "html"
 )
 
 // Formats lists all supported formats in UI order.
-var Formats = []Format{CSV, XLSX, PDF, HTML}
+var Formats = []Format{CSV, XLS, XLSX, PDF, HTML}
 
 // Label returns a human-readable name of the format.
 func (f Format) Label() string {
 	switch f {
 	case CSV:
 		return "CSV (разделитель «;», UTF-8)"
+	case XLS:
+		return "XLS (Excel 97–2003, .xls)"
 	case XLSX:
-		return "XLS (Excel, .xlsx)"
+		return "XLSX (Excel 2007+, .xlsx)"
 	case PDF:
 		return "PDF"
 	case HTML:
@@ -38,9 +41,21 @@ func (f Format) Label() string {
 	return string(f)
 }
 
+// Options control the content and naming of exported files.
+type Options struct {
+	// WithInfo copies the informational lines of the source file into every file.
+	WithInfo bool
+	// BlankRows is the number of empty lines at the very beginning of every file.
+	BlankRows int
+	// CodeNames names files by the department number only ("037" instead of
+	// "037 Отдел главного энергетика"); names without digits are kept.
+	CodeNames bool
+}
+
 // Sheet is the content of one output file.
 type Sheet struct {
 	Title  string
+	Blank  int
 	Info   [][]string
 	Header []string
 	Rows   [][]string
@@ -48,9 +63,9 @@ type Sheet struct {
 }
 
 // NewSheet builds a sheet for one department of the document.
-func NewSheet(doc *table.Doc, dept table.Department, withInfo bool) *Sheet {
-	s := &Sheet{Title: dept.Name, Header: doc.Header, Rows: dept.Rows, BOM: doc.BOM}
-	if withInfo {
+func NewSheet(doc *table.Doc, dept table.Department, opt Options) *Sheet {
+	s := &Sheet{Title: dept.Name, Header: doc.Header, Rows: dept.Rows, BOM: doc.BOM, Blank: max(opt.BlankRows, 0)}
+	if opt.WithInfo {
 		s.Info = doc.Info
 	}
 	return s
@@ -89,6 +104,8 @@ func Write(f Format, path string, s *Sheet) error {
 	switch f {
 	case CSV:
 		return writeCSV(path, s)
+	case XLS:
+		return writeXLS(path, s)
 	case XLSX:
 		return writeXLSX(path, s)
 	case PDF:
@@ -107,7 +124,7 @@ type Result struct {
 
 // Run exports every department in every format into dir.
 // progress is called after each written file with (done, total).
-func Run(doc *table.Doc, depts []table.Department, formats []Format, dir string, withInfo bool, progress func(done, total int)) Result {
+func Run(doc *table.Doc, depts []table.Department, formats []Format, dir string, opt Options, progress func(done, total int)) Result {
 	var res Result
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		res.Errors = append(res.Errors, err)
@@ -117,8 +134,12 @@ func Run(doc *table.Doc, depts []table.Department, formats []Format, dir string,
 	done := 0
 	names := NewNamer()
 	for _, d := range depts {
-		base := names.Name(d.Name)
-		sheet := NewSheet(doc, d, withInfo)
+		name := d.Name
+		if opt.CodeNames {
+			name = DeptCode(name)
+		}
+		base := names.Name(name)
+		sheet := NewSheet(doc, d, opt)
 		for _, f := range formats {
 			path := filepath.Join(dir, base+"."+string(f))
 			if err := Write(f, path, sheet); err != nil {

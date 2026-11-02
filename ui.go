@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -22,6 +23,9 @@ const (
 	prefFormats    = "formats"
 	prefWithInfo   = "withInfo"
 	prefLastOpened = "lastOpenedDir"
+	prefCodeNames  = "codeNames"
+	prefBlankOn    = "blankRowsOn"
+	prefBlankRows  = "blankRows"
 )
 
 type ui struct {
@@ -47,6 +51,13 @@ func newUI(a fyne.App) *ui {
 	openBtn := widget.NewButtonWithIcon("Открыть CSV…", theme.FolderOpenIcon(), u.openFile)
 	openBtn.Importance = widget.HighImportance
 	aboutBtn := widget.NewButtonWithIcon("О программе", theme.InfoIcon(), u.showAbout)
+	settingsBtn := widget.NewButtonWithIcon("Настройки", theme.SettingsIcon(), u.showSettings)
+	applyTheme(a, isDark(a))
+	themeBtn := widget.NewButtonWithIcon("", theme.ColorPaletteIcon(), func() {
+		dark := !isDark(a)
+		a.Preferences().SetBool(prefDarkTheme, dark)
+		applyTheme(a, dark)
+	})
 
 	u.fileLabel = widget.NewLabel("Файл не загружен. Откройте CSV или перетащите его в окно.")
 	u.fileLabel.Truncation = fyne.TextTruncateEllipsis
@@ -65,7 +76,7 @@ func newUI(a fyne.App) *ui {
 	u.exportBtn.Importance = widget.HighImportance
 
 	top := container.NewVBox(
-		container.NewBorder(nil, nil, openBtn, aboutBtn, u.fileLabel),
+		container.NewBorder(nil, nil, openBtn, container.NewHBox(themeBtn, settingsBtn, aboutBtn), u.fileLabel),
 		u.summary,
 		container.NewBorder(nil, nil, nil, container.NewHBox(allBtn, noneBtn), u.search),
 		widget.NewSeparator(),
@@ -212,7 +223,7 @@ func (u *ui) showExport() {
 	}
 	prefs := u.app.Preferences()
 
-	saved := prefs.StringWithFallback(prefFormats, "csv,xlsx")
+	saved := prefs.StringWithFallback(prefFormats, "csv,xls")
 	checks := map[export.Format]*widget.Check{}
 	formatBox := container.NewVBox()
 	for _, f := range export.Formats {
@@ -280,9 +291,10 @@ func (u *ui) showExport() {
 		progress.SetValue(0)
 		progress.Show()
 		status.SetText("Экспорт…")
-		info := withInfo.Checked
+		opt := u.exportOptions()
+		opt.WithInfo = withInfo.Checked
 		go func() {
-			res := export.Run(u.doc, depts, formats, dir, info, func(done, total int) {
+			res := export.Run(u.doc, depts, formats, dir, opt, func(done, total int) {
 				fyne.Do(func() { progress.SetValue(float64(done) / float64(total)) })
 			})
 			fyne.Do(func() {
@@ -324,15 +336,72 @@ func (u *ui) showExport() {
 
 func (u *ui) showAbout() {
 	site, _ := url.Parse(appSite)
+	about := widget.NewLabel(`Делит CSV на части и преобразует в в CSV, XLS (xlsx), PDF и HTML. ` +
+		`Программа написано специально для АО "ЗОМЗ" для увеличение продуктивности и оптимизации. Выгрузок для 1С.`)
+	about.Wrapping = fyne.TextWrapWord
 	content := container.NewVBox(
 		widget.NewLabelWithStyle(appName, fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewLabel("Версия: "+appVersion),
 		widget.NewLabel("Автор: "+appAuthor),
 		widget.NewHyperlink("nookbat.ru", site),
+		widget.NewHyperlink(appEmail, &url.URL{Scheme: "mailto", Opaque: appEmail}),
 		widget.NewLabel(""),
-		widget.NewLabel("Делит CSV-выгрузку из 1С (разделитель «;», UTF-8)\n"+
-			"на отдельные таблицы по подразделениям (3-й столбец)\n"+
-			"и сохраняет их в CSV, XLS (xlsx), PDF и HTML."),
+		about,
 	)
-	dialog.NewCustom("О программе", "OK", content, u.win).Show()
+	d := dialog.NewCustom("О программе", "OK", content, u.win)
+	d.Resize(fyne.NewSize(520, 0))
+	d.Show()
+}
+
+func (u *ui) exportOptions() export.Options {
+	p := u.app.Preferences()
+	opt := export.Options{CodeNames: p.BoolWithFallback(prefCodeNames, true)}
+	if p.BoolWithFallback(prefBlankOn, true) {
+		opt.BlankRows = p.IntWithFallback(prefBlankRows, 2)
+	}
+	return opt
+}
+
+func (u *ui) showSettings() {
+	p := u.app.Preferences()
+	codeNames := widget.NewCheck("В именах файлов писать только номер отдела (например «037», «009-567»)", nil)
+	codeNames.SetChecked(p.BoolWithFallback(prefCodeNames, true))
+	hint := widget.NewLabel("Названия без цифр сохраняются полностью.")
+	hint.Importance = widget.LowImportance
+
+	count := widget.NewSelectEntry([]string{"1", "2", "3", "4", "5"})
+	count.SetText(strconv.Itoa(p.IntWithFallback(prefBlankRows, 2)))
+	blankOn := widget.NewCheck("Добавлять пустые строки в начале документа", func(v bool) {
+		if v {
+			count.Enable()
+		} else {
+			count.Disable()
+		}
+	})
+	blankOn.SetChecked(p.BoolWithFallback(prefBlankOn, true))
+	if !blankOn.Checked {
+		count.Disable()
+	}
+
+	content := container.NewVBox(
+		codeNames, hint,
+		widget.NewSeparator(),
+		blankOn,
+		container.NewBorder(nil, nil, widget.NewLabel("Количество строк:"), nil, count),
+	)
+	d := dialog.NewCustomConfirm("Настройки", "Сохранить", "Отмена", content, func(ok bool) {
+		if !ok {
+			return
+		}
+		n, err := strconv.Atoi(strings.TrimSpace(count.Text))
+		if err != nil || n < 0 || n > 100 {
+			dialog.ShowInformation("Настройки", "Количество пустых строк — число от 0 до 100.", u.win)
+			return
+		}
+		p.SetBool(prefCodeNames, codeNames.Checked)
+		p.SetBool(prefBlankOn, blankOn.Checked)
+		p.SetInt(prefBlankRows, n)
+	}, u.win)
+	d.Resize(fyne.NewSize(600, 0))
+	d.Show()
 }

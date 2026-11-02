@@ -45,7 +45,7 @@ Section: utils
 Priority: optional
 Architecture: amd64
 Installed-Size: ${SIZE}
-Maintainer: Горшков Сергей Владимирович <nookbat@gmail.com>
+Maintainer: Горшков Сергей Владимирович <i@nookbat.ru>
 Homepage: https://nookbat.ru/
 Depends: libc6 (>= 2.28), libgl1, libx11-6, libxcursor1, libxrandr2, libxinerama1, libxi6, libxxf86vm1, libxkbcommon0
 Description: Split a 1C CSV export into per-department tables
