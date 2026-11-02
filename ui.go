@@ -336,8 +336,8 @@ func (u *ui) showExport() {
 
 func (u *ui) showAbout() {
 	site, _ := url.Parse(appSite)
-	about := widget.NewLabel(`Делит CSV на части и преобразует в в CSV, XLS (xlsx), PDF и HTML. ` +
-		`Программа написано специально для АО "ЗОМЗ" для увеличение продуктивности и оптимизации. Выгрузок для 1С.`)
+	about := widget.NewLabel(`Делит CSV на части и преобразует в CSV, XLS, XLSX, PDF и HTML. ` +
+		`Программа написана специально для АО "ЗОМЗ" направленна увеличение продуктивности и оптимизации. Выгрузок с СКУД для 1С.`)
 	about.Wrapping = fyne.TextWrapWord
 	content := container.NewVBox(
 		widget.NewLabelWithStyle(appName, fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
